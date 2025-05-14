@@ -10,6 +10,6 @@ tidyr, # data wrangling
 data.table, # data wrangling
 )
 
-# Connexion aux données
-donnees_ap <- open_dataset("Data/all_PAs_conso.parquet")
+# Chargement des données
+donnees_ap <- arrow::read_parquet("Data/all_PAs_conso.parquet")
 
