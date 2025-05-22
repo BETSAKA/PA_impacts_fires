@@ -19,6 +19,7 @@ donnees_ap
 # Nombre d'AP incluses 
 donnees_ap %>% summarise(NB_AP=n_distinct(WDPAID))
 donnees_ap %>% summarise(NB_AP=n_distinct(WDPA_PID))
+donnees_ap %>% summarise(NB_AP=n_distinct(NAME))
 
 # Période couverte
 donnees_ap %>% summarise(MIN_YEAR=min(STATUS_YR, na.rm = TRUE), MAX_YEAR=max(STATUS_YR,  na.rm = TRUE))
@@ -43,3 +44,11 @@ cat_table <- donnees_ap %>% group_by(STATUS_YR, IUCN_CAT) %>%
   pivot_wider(names_from = IUCN_CAT, values_from = NB, values_fill = 0)
 
 
+
+#library(tidyverse)
+#library(arrow)
+#library(geoarrow)
+#library(sf)
+#wdpa_conso <- read_parquet("sources/MDG_WDPA_Consolidated.parquet") 
+#test <- wdpa_conso %>%
+#  filter(NAME == "Mahialambo")
