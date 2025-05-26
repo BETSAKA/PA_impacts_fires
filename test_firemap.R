@@ -12,13 +12,106 @@ pacman::p_load(
   data.table, #manipulation de données
   sf, #traitement données spatiales
   tmap, #production de cartes
-  geodata, #accès aux frontières administratives
+  tmaptools, #accès à la fonction read_osm()
+  OpenStreetMap, #fonds de carte OSM
+  geodata, #accès aux frontières administratives,
   mapme.biodiversity
 )
 
-#Charger les données
+
+### 1. Création d'une carte statique pour l'année 2001
+
+#Charger les données des AP
 sapm_2017 <- read_rds("Data/sapm_2017.rds")
 
 #Générer la carte SAPM 2017
-tm_shape(sapm_2017) +
+tmap_mode("view")
+  tm_shape(sapm_2017) +
   tm_polygons(col = "CATEG_IUCN")
+
+#Ajout des données MODIS
+#Requête de données manuelle à : https://firms.modaps.eosdis.nasa.gov/download/create.php
+fires_2001 <- read_csv("Data/fire_archive_M-C61_615652.csv") %>%
+    st_as_sf(coords = c("longitude", "latitude"), crs = 4326) %>%
+    filter(grepl('2001', acq_date), confidence > 50)
+
+sapm_filter2001 <- sapm_2017 %>% filter(year(ymd(DATE_CREAT)) < 2002)
+
+#Générer la carte avec les feux actifs pour 2001
+breaks_frp_5 <- quantile(fires_2001$frp, probs = seq(0, 1, by = 0.25), 
+                         na.rm = TRUE)
+
+tm_shape(sapm_filter2001) +
+  tm_polygons(col = "CATEG_IUCN")+
+  tm_shape(fires_2001) +
+  tm_dots(col = "frp", size = 0.2, alpha = 1,
+          palette =  colorRampPalette(c("yellow", "red"))(5),
+          border.col = NULL, breaks = breaks_frp_5,
+          popup.vars = c("acq_date", "confidence", "frp"),
+          title = "Fire radiative power") +
+  tm_layout(title = "Feux détectés à Madagascar en 2001") 
+
+
+
+
+
+
+### 2. Création d'une série de cartes statiques pour la période 2001-2024
+
+
+# Fonction pour générer une carte pour une année donnée
+gen_fire_map <- function(year, sapm_data, fire_data, out_dir = "fire_maps", palette, breaks, bbox) {
+  
+  tmap_mode("plot")  # mode nécessaire pour tmap_save()
+  message("Création de la carte pour ", year, "...")
+  
+  # Filtrer les données
+  sapm_y <- sapm_data %>% filter(lubridate::year(DATE_CREAT) <= year)
+  fires_y <- fire_data %>% filter(lubridate::year(acq_date) == year, confidence > 50)
+  
+  
+  # Télécharger le fond OSM comme raster (via {tmaptools})
+  osm_bg <- read_osm(bbox, zoom = 10, type = "osm")
+
+  # Créer la carte
+  p <- tm_shape(osm_bg) +
+    tm_rgb() +  # afficher le fond de carte
+    tm_shape(sapm_y) +
+    tm_polygons(col = "CATEG_IUCN") +
+    tm_shape(fires_y) +
+    tm_dots(col = "frp", size = 0.1, palette = palette,
+            breaks = breaks, border.col = NA) +
+    tm_layout(title = paste("Feux et aires protégées à Madagascar -", year))
+  
+  # Créer le répertoire si nécessaire
+  if (!dir.exists(out_dir)) dir.create(out_dir, recursive = TRUE)
+  
+  # Sauvegarder
+  filename <- file.path(out_dir, str_glue("firemap_{year}.png"))
+  tmap_save(p, filename = filename, width = 8, height = 6)
+}
+
+#Définition du bounding box
+bbox_mada <- c(xmin = 40.488278, ymin = -26.720163, xmax = 56.250000, ymax = -9.949521)
+
+# Choix de la période
+years <- 2001:2001
+
+#Palette de couleurs et seuils pour frp
+fire_palette <- colorRampPalette(c("yellow", "red"))(5)
+
+# Chargement des données complètes pour les feux
+modis_fires <- read_csv("Data/fire_archive_M-C61_615652.csv") %>%
+  st_as_sf(coords = c("longitude", "latitude"), crs = 4326)
+
+
+# Générer toutes les cartes avec purrr::walk()
+walk(years, gen_fire_map,
+     sapm_data = sapm_2017,
+     fire_data = modis_fires,
+     out_dir = "fire_maps",
+     palette = fire_palette,
+     breaks = breaks_frp_5,
+     bbox = bbox_mada)
+
+  
