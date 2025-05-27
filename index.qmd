@@ -2,6 +2,7 @@
 title: "Incidence des feux dans les aires protégées de Madagascar"
 format:
   html:
+    theme: cosmo
     self-contained: true
     toc: true
     toc-depth: 2
