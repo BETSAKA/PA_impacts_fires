@@ -1,15 +1,17 @@
 ---
 title: "Incidence des feux dans les aires protégées de Madagascar"
-format: html
-theme: cosmo
-toc: true
-toc-depth: 2
-toc-location: left
-number-sections: true
-number-depth: 3
-code-fold: true
-execute: 
-  enabled: false
+format:
+  html:
+    theme: cosmo
+    self-contained: true
+    toc: true
+    toc-depth: 2
+    toc-location: left
+    number-sections: true
+    number-depth: 3
+    code-fold: true
+    execute: 
+      enabled: false
 ---
 
 # Introduction
