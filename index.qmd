@@ -10,6 +10,8 @@ format:
     number-sections: true
     number-depth: 3
     code-fold: true
+    author: "Thomas Thivillon"
+    date: 05/27/2025
     execute: 
       enabled: false
 ---
