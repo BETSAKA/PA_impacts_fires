@@ -15,7 +15,8 @@ pacman::p_load(
   tmaptools, #accès à la fonction read_osm()
   OpenStreetMap, #fonds de carte OSM
   geodata, #accès aux frontières administratives,
-  mapme.biodiversity
+  maptiles, #accès aux tuiles de carte avec tmap
+  magick #gifs animés
 )
 
 
@@ -71,15 +72,16 @@ gen_fire_map <- function(year, sapm_data, fire_data, out_dir = "fire_maps", pale
   
   
   # Télécharger le fond OSM comme raster (via {tmaptools})
-  osm_bg <- read_osm(bbox, zoom = 10, type = "osm")
+  #osm_bg <- read_osm(bbox, zoom = 10, type = "osm")
 
   # Créer la carte
-  p <- tm_shape(osm_bg) +
-    tm_rgb() +  # afficher le fond de carte
-    tm_shape(sapm_y) +
+  p <- tm_shape(sapm_y, bbox = bbox) +
+    #tm_shape(osm_bg) +
+    #tm_rgb() +  # afficher le fond de carte
+    tm_basemap() +
     tm_polygons(col = "CATEG_IUCN") +
     tm_shape(fires_y) +
-    tm_dots(col = "frp", size = 0.1, palette = palette,
+    tm_dots(col = "frp", size = 0.03, palette = palette,
             breaks = breaks, border.col = NA) +
     tm_layout(title = paste("Feux et aires protégées à Madagascar -", year))
   
@@ -91,11 +93,6 @@ gen_fire_map <- function(year, sapm_data, fire_data, out_dir = "fire_maps", pale
   tmap_save(p, filename = filename, width = 8, height = 6)
 }
 
-#Définition du bounding box
-bbox_mada <- c(xmin = 40.488278, ymin = -26.720163, xmax = 56.250000, ymax = -9.949521)
-
-# Choix de la période
-years <- 2001:2001
 
 #Palette de couleurs et seuils pour frp
 fire_palette <- colorRampPalette(c("yellow", "red"))(5)
@@ -104,6 +101,11 @@ fire_palette <- colorRampPalette(c("yellow", "red"))(5)
 modis_fires <- read_csv("Data/fire_archive_M-C61_615652.csv") %>%
   st_as_sf(coords = c("longitude", "latitude"), crs = 4326)
 
+#Définition du bounding box
+bbox_mada <- c(xmin = 40.488278, ymin = -26.720163, xmax = 56.250000, ymax = -9.949521)
+
+# Choix de la période
+years <- 2011:2024
 
 # Générer toutes les cartes avec purrr::walk()
 walk(years, gen_fire_map,
@@ -114,4 +116,13 @@ walk(years, gen_fire_map,
      breaks = breaks_frp_5,
      bbox = bbox_mada)
 
-  
+
+
+### 3.Création de l'animation avec magick
+
+imgs <- list.files("fire_maps", pattern = "firemap_\\d+\\.png", full.names = TRUE) %>%
+  image_read() %>%
+  image_join() %>%
+  image_animate(fps = 1)  # 1 image par seconde
+
+image_write(imgs, "fire_maps/fire_animation.gif")
